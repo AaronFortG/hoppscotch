@@ -24,6 +24,7 @@ import {
   addGlobalEnvVariable,
   appendEnvironments,
   environments$,
+  getGlobalVariables,
 } from "~/newstore/environments"
 
 import { GQLError } from "~/helpers/backend/GQLClient"
@@ -141,12 +142,59 @@ const PostmanEnvironmentsImport: ImporterOrExporter = {
       const res = await postmanEnvImporter(environments)()
 
       if (E.isRight(res)) {
-        await handleImportToStore(res.right)
+        const { environments: importedEnvs, globalsDetected } = res.right
+
+        if (globalsDetected) {
+          // Handle globals import with merge logic
+          const existingGlobals = getGlobalVariables()
+
+          // Find the globals environment (name is "Global")
+          const globalsEnv = importedEnvs.find((env) => env.name === "Global")
+
+          if (globalsEnv) {
+            // Create index map for quick lookup
+            const existingIndices = new Map(
+              existingGlobals.map((v, index) => [v.key, index])
+            )
+
+            // Import updateGlobalEnvVariable
+            const { updateGlobalEnvVariable } = await import(
+              "~/newstore/environments"
+            )
+
+            // Process each imported variable
+            globalsEnv.variables.forEach((importedVar) => {
+              const existingIndex = existingIndices.get(importedVar.key)
+
+              if (existingIndex !== undefined) {
+                // Update existing variable with imported values
+                updateGlobalEnvVariable(existingIndex, importedVar)
+              } else {
+                // Add new variable
+                addGlobalEnvVariable(importedVar)
+              }
+            })
+
+            toast.success(t("environment.imported"))
+          }
+
+          // Import any non-global environments if present
+          const regularEnvs = importedEnvs.filter(
+            (env) => env.name !== "Global"
+          )
+          if (regularEnvs.length > 0) {
+            await handleImportToStore(regularEnvs)
+          }
+        } else {
+          // Regular environment import
+          await handleImportToStore(importedEnvs)
+        }
 
         platform.analytics?.logEvent({
           type: "HOPP_IMPORT_ENVIRONMENT",
           platform: "rest",
-          workspaceType: isTeamEnvironment.value ? "team" : "personal",
+          workspaceType:
+            isTeamEnvironment.value && !globalsDetected ? "team" : "personal",
         })
 
         emit("hide-modal")

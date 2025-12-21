@@ -47,7 +47,7 @@
           v-tippy="{ theme: 'tooltip' }"
           :icon="IconImport"
           :title="t('modal.import_export')"
-          @click="displayModalImportExport(true)"
+          @click="openImportModal"
         />
       </div>
     </div>
@@ -97,7 +97,7 @@
               outline
               :title="isTeamViewer ? t('team.no_access') : ''"
               :disabled="isTeamViewer"
-              @click="isTeamViewer ? null : displayModalImportExport(true)"
+              @click="isTeamViewer ? null : openImportModal()"
             />
             <HoppButtonSecondary
               :label="`${t('add.new')}`"
@@ -165,7 +165,7 @@ import { useColorMode } from "~/composables/theming"
 import IconPlus from "~icons/lucide/plus"
 import IconHelpCircle from "~icons/lucide/help-circle"
 import IconImport from "~icons/lucide/folder-down"
-import { defineActionHandler } from "~/helpers/actions"
+import { defineActionHandler, invokeAction } from "~/helpers/actions"
 import { TeamWorkspace } from "~/services/workspace.service"
 import { sortTeamEnvironmentsAlphabetically } from "~/helpers/utils/sortEnvironmentsAlphabetically"
 import { getEnvActionErrorMessage } from "~/helpers/error-messages"
@@ -290,4 +290,12 @@ defineActionHandler(
     }
   }
 )
+
+defineActionHandler("modals.environment.import", () => {
+  displayModalImportExport(true)
+})
+
+const openImportModal = () => {
+  invokeAction("modals.environment.import")
+}
 </script>

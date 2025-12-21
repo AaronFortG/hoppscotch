@@ -16,9 +16,15 @@ const postmanEnvSchema = z.object({
       type: z.string(),
     })
   ),
+  _postman_variable_scope: z.enum(["environment", "globals"]),
 })
 
 type PostmanEnv = z.infer<typeof postmanEnvSchema>
+
+export type PostmanEnvImportResult = {
+  environments: Environment[]
+  globalsDetected: boolean
+}
 
 export const postmanEnvImporter = (contents: string[]) => {
   const parsedContents = contents.map((str) => safeParseJSON(str, true))
@@ -48,20 +54,32 @@ export const postmanEnvImporter = (contents: string[]) => {
     return TE.left(IMPORTER_INVALID_FILE_FORMAT)
   }
 
+  let globalsDetected = false
+
   // Convert `values` to `variables` to match the format expected by the system
   const environments: Environment[] = validationResult.data.map(
-    ({ name, values }) => ({
-      id: uniqueID(),
-      v: EnvironmentSchemaVersion,
-      name,
-      variables: values.map(({ key, value, type }) => ({
-        key,
-        initialValue: value,
-        currentValue: value,
-        secret: type === "secret",
-      })),
-    })
+    ({ name, values, _postman_variable_scope }) => {
+      // Detect if this is a globals file
+      globalsDetected = _postman_variable_scope === "globals"
+
+      return {
+        id: uniqueID(),
+        v: EnvironmentSchemaVersion,
+        name: globalsDetected ? "Global" : name,
+        variables: values.map(({ key, value, type }) => ({
+          key,
+          initialValue: value,
+          currentValue: value,
+          secret: type === "secret",
+        })),
+      }
+    }
   )
 
-  return TE.right(environments)
+  const result: PostmanEnvImportResult = {
+    environments,
+    globalsDetected,
+  }
+
+  return TE.right(result)
 }

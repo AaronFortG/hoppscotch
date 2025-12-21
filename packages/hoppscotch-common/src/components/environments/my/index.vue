@@ -28,7 +28,7 @@
           v-tippy="{ theme: 'tooltip' }"
           :icon="IconImport"
           :title="t('modal.import_export')"
-          @click="displayModalImportExport(true)"
+          @click="openImportModal"
         />
       </div>
     </div>
@@ -116,11 +116,12 @@ import { useI18n } from "~/composables/i18n"
 import IconPlus from "~icons/lucide/plus"
 import IconImport from "~icons/lucide/folder-down"
 import IconHelpCircle from "~icons/lucide/help-circle"
-import { defineActionHandler } from "~/helpers/actions"
+import { defineActionHandler, invokeAction } from "~/helpers/actions"
 import { sortPersonalEnvironmentsAlphabetically } from "~/helpers/utils/sortEnvironmentsAlphabetically"
 import { HandleEnvChangeProp } from "../index.vue"
 import { Environment } from "@hoppscotch/data"
 import { handleTokenValidation } from "~/helpers/handleTokenValidation"
+import EnvironmentsImportExport from "../ImportExport.vue"
 
 const t = useI18n()
 const colorMode = useColorMode()
@@ -225,4 +226,12 @@ defineActionHandler(
     }
   }
 )
+
+defineActionHandler("modals.environment.import", () => {
+  displayModalImportExport(true)
+})
+
+const openImportModal = () => {
+  invokeAction("modals.environment.import")
+}
 </script>
